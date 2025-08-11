@@ -1,5 +1,5 @@
-import {ChatMessage, Color, Coordinates, Player} from "@/types";
-import assert from "node:assert";
+import { ChatMessage, Color, Coordinates, Player } from "@/types";
+import util from "util";
 
 export * from "@/types";
 
@@ -31,7 +31,6 @@ export default class FicsitRemoteMonitoring {
      * @param util
      */
     public constructor(
-        private readonly util: {inspect: (object: any, options?: Partial<{depth: number | null, colors: boolean}>) => string},
         public readonly port: number = 8080,
         public readonly token?: string,
         baseUrl: string = "http://localhost"
@@ -70,7 +69,7 @@ export default class FicsitRemoteMonitoring {
             const responseBody = (await response.json()) as object | undefined;
             if (!response.ok || !responseBody) {
                 const err = new Error(
-                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${this.util.inspect(responseBody, { depth: null, colors: true })}`
+                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
                 );
                 if (error) {
                     throw err;
@@ -81,7 +80,7 @@ export default class FicsitRemoteMonitoring {
             if (!error) return { ok: false, error: err as Error };
             if (
                 err instanceof TypeError &&
-                this.util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
+                util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
             ) {
                 throw new TypeError(err.message + ". [31mIs the Ficsit Remote Monitoring server running?[0m", {
                     cause: err.cause
@@ -120,7 +119,8 @@ export default class FicsitRemoteMonitoring {
 
     public async getChatMessages(): Promise<ChatMessage[]> {
         const response = await this.doRequest("getChatMessages");
-        assert(response.responseBody);
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
     }
 
@@ -159,10 +159,10 @@ export default class FicsitRemoteMonitoring {
         >(response.responseBody);
     }
 
-    public async sendChatMessage(message: string, params?: Partial<{sender: "" | "ada" | string, color: Color}>) {
-        const response = await this.doRequest("sendChatMessage", "POST", {message: message, ...params}, true);
+    public async sendChatMessage(message: string, params?: Partial<{ sender: "" | "ada" | string; color: Color }>) {
+        const response = await this.doRequest("sendChatMessage", "POST", { message: message, ...params }, true);
         if (!response.ok) throw response.error;
         if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw<{isSent: boolean, message: string}>(response.responseBody);
+        return FicsitRemoteMonitoring.parseBodyRaw<{ isSent: boolean; message: string }>(response.responseBody);
     }
 }

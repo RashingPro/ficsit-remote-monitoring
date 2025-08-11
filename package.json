@@ -23,10 +23,12 @@
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "@types/node": "^24.2.1",
     "prettier": "^3.6.2",
     "prettier-plugin-unused-imports-configurable": "^1.15.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "util": "^0.12.5"
   }
 }
