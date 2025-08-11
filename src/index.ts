@@ -1,5 +1,4 @@
 import {ChatMessage, Color, Coordinates, Player} from "@/types";
-import util from "node:util";
 import assert from "node:assert";
 
 export * from "@/types";
@@ -29,13 +28,15 @@ export default class FicsitRemoteMonitoring {
      * @param port
      * @param token Required only for [these endpoints](https://docs.ficsit.app/ficsitremotemonitoring/latest/json/Write/Write.html). More about it [here](https://docs.ficsit.app/ficsitremotemonitoring/latest/json/authentication.html)
      * @param baseUrl url in format http://some-url or https://some-url/some/subpage. Do **NOT** put slash or port in the end
+     * @param util
      */
     public constructor(
+        private readonly util: {inspect: (object: any, options?: Partial<{depth: number | null, colors: boolean}>) => string},
         public readonly port: number = 8080,
         public readonly token?: string,
-        baseUrl?: string
+        baseUrl: string = "http://localhost"
     ) {
-        this.API_BASE_URL = `${baseUrl ?? "http://localhost"}:${port}`;
+        this.API_BASE_URL = `${baseUrl}:${port}`;
     }
 
     public readonly API_BASE_URL;
@@ -69,7 +70,7 @@ export default class FicsitRemoteMonitoring {
             const responseBody = (await response.json()) as object | undefined;
             if (!response.ok || !responseBody) {
                 const err = new Error(
-                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
+                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${this.util.inspect(responseBody, { depth: null, colors: true })}`
                 );
                 if (error) {
                     throw err;
@@ -80,7 +81,7 @@ export default class FicsitRemoteMonitoring {
             if (!error) return { ok: false, error: err as Error };
             if (
                 err instanceof TypeError &&
-                util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
+                this.util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
             ) {
                 throw new TypeError(err.message + ". [31mIs the Ficsit Remote Monitoring server running?[0m", {
                     cause: err.cause
