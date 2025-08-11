@@ -1,7 +1,15 @@
 import { ChatMessage } from "@/types";
 import util from "node:util";
+import assert from "node:assert";
 
 export * from "@/types";
+
+export interface FicsitRemoteMonitoringResponse {
+    ok: boolean;
+    response?: Response;
+    responseBody?: object;
+    error?: Error;
+}
 
 export default class FicsitRemoteMonitoring {
     /**
@@ -23,8 +31,9 @@ export default class FicsitRemoteMonitoring {
         endpoint: string,
         method: "GET" | "POST" = "GET",
         body?: object,
-        includeAuth: boolean = false
-    ) {
+        includeAuth: boolean = false,
+        error: boolean = true
+    ): Promise<FicsitRemoteMonitoringResponse> {
         let headers: HeadersInit = {};
         if (includeAuth) {
             if (!this.token) throw new Error("No token specified");
@@ -36,18 +45,26 @@ export default class FicsitRemoteMonitoring {
                 body: body ? JSON.stringify(body) : undefined,
                 headers: headers
             });
-            return response;
-        } catch (error) {
-            if (
-                error instanceof TypeError &&
-                util.inspect(error.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
-            ) {
-                throw new TypeError(error.message + ". [31mAre the Ficsit Remote Monitoring server running?[0m", {
-                    cause: error.cause
-                });
-            } else {
-                throw error;
+            const responseBody = (await response.json()) as object[] | undefined;
+            if (!response.ok || !responseBody) {
+                const err = new Error(
+                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
+                );
+                if (error) {
+                    throw err;
+                } else return { ok: false, response: response, responseBody: response, error: err };
             }
+            return { ok: true, response: response, responseBody: responseBody };
+        } catch (err) {
+            if (!error) return { ok: false, error: err as Error };
+            if (
+                err instanceof TypeError &&
+                util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
+            ) {
+                throw new TypeError(err.message + ". [31mAre the Ficsit Remote Monitoring server running?[0m", {
+                    cause: err.cause
+                });
+            } else throw err;
         }
     }
 
@@ -70,13 +87,18 @@ export default class FicsitRemoteMonitoring {
         return this.parseBodyRawEntry(body) as T;
     }
 
+    public async ping(): Promise<number> {
+        const before = new Date();
+        const response = await this.doRequest("/ping", "GET", undefined, false, false);
+        if (!response.responseBody) return -1;
+        const after = new Date();
+        const ping = after.valueOf() - before.valueOf();
+        return ping;
+    }
+
     public async getChatMessages(): Promise<ChatMessage[]> {
         const response = await this.doRequest("getChatMessages");
-        const responseBody = (await response.json()) as object[] | undefined;
-        if (!response.ok || !responseBody)
-            throw new Error(
-                `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
-            );
-        return FicsitRemoteMonitoring.parseBodyRaw(responseBody);
+        assert(response.responseBody);
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
     }
 }
