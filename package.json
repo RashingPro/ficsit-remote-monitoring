@@ -2,9 +2,24 @@
   "name": "ficsit-remote-monitoring",
   "version": "1.0.0",
   "description": "Node.js interface for Satisfactory via Ficsit Remote Monitoring mod",
-  "main": "index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "author": {
+    "name": "RashingPro",
+    "url": "https://rashing.pro/",
+    "email": "contact@rashing.pro"
+  },
+  "license": "MIT",
   "scripts": {
-    "style": "prettier . --write"
+    "style": "prettier . --write",
+    "build": "tsup"
   },
   "private": true,
   "devDependencies": {
