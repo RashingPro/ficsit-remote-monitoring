@@ -1,6 +1,6 @@
 {
   "name": "ficsit-remote-monitoring",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Node.js interface for Satisfactory via Ficsit Remote Monitoring mod",
   "types": "./dist/index.d.ts",
   "exports": {
