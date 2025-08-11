@@ -75,7 +75,7 @@ export default class FicsitRemoteMonitoring {
                 err instanceof TypeError &&
                 util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
             ) {
-                throw new TypeError(err.message + ". [31mAre the Ficsit Remote Monitoring server running?[0m", {
+                throw new TypeError(err.message + ". [31mIs the Ficsit Remote Monitoring server running?[0m", {
                     cause: err.cause
                 });
             } else throw err;
