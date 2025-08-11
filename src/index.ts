@@ -1,4 +1,4 @@
-import { ChatMessage, Coordinates, Player } from "@/types";
+import {ChatMessage, Color, Coordinates, Player} from "@/types";
 import util from "node:util";
 import assert from "node:assert";
 
@@ -156,5 +156,12 @@ export default class FicsitRemoteMonitoring {
         return FicsitRemoteMonitoring.parseBodyRaw<
             { id: string; name?: string; status?: boolean; priority?: number }[]
         >(response.responseBody);
+    }
+
+    public async sendChatMessage(message: string, params?: Partial<{sender: "" | "ada" | string, color: Color}>) {
+        const response = await this.doRequest("sendChatMessage", "POST", {message: message, ...params}, true);
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw<{isSent: boolean, message: string}>(response.responseBody);
     }
 }
