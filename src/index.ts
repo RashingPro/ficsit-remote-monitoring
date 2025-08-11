@@ -1,4 +1,4 @@
-import { ChatMessage } from "@/types";
+import { ChatMessage, Player } from "@/types";
 import util from "node:util";
 import assert from "node:assert";
 
@@ -83,7 +83,7 @@ export default class FicsitRemoteMonitoring {
             if (typeof entry === "object") {
                 return Object.fromEntries(
                     Object.entries(entry).map(([key, value]) => {
-                        let newKey = key.charAt(0).toLowerCase() + key.slice(1);
+                        let newKey = key == "ID" ? "id" : key.charAt(0).toLowerCase() + key.slice(1);
                         return [newKey, this.parseBodyRawEntry(value)];
                     })
                 );
@@ -106,6 +106,12 @@ export default class FicsitRemoteMonitoring {
 
     public async getChatMessages(): Promise<ChatMessage[]> {
         const response = await this.doRequest("getChatMessages");
+        assert(response.responseBody);
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+
+    public async getPlayers(): Promise<Player[]> {
+        const response = await this.doRequest("getPlayer");
         assert(response.responseBody);
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
     }
