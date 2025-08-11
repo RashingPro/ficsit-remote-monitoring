@@ -4,12 +4,18 @@ import assert from "node:assert";
 
 export * from "@/types";
 
-export interface FicsitRemoteMonitoringResponse {
-    ok: boolean;
-    response?: Response;
-    responseBody?: object;
-    error?: Error;
-}
+export type FicsitRemoteMonitoringResponse =
+    | {
+          ok: true;
+          response: Response;
+          responseBody?: object;
+      }
+    | {
+          ok: false;
+          response?: Response;
+          responseBody?: object;
+          error: Error;
+      };
 
 export default class FicsitRemoteMonitoring {
     /**
@@ -112,7 +118,8 @@ export default class FicsitRemoteMonitoring {
 
     public async getPlayers(): Promise<Player[]> {
         const response = await this.doRequest("getPlayer");
-        assert(response.responseBody);
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error")
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
     }
 }
