@@ -17,6 +17,13 @@ export type FicsitRemoteMonitoringResponse =
           error: Error;
       };
 
+export interface SetSwitchParams {
+    id: string;
+    name?: string;
+    priority?: number;
+    status?: boolean;
+}
+
 export default class FicsitRemoteMonitoring {
     /**
      * @param port
@@ -59,7 +66,7 @@ export default class FicsitRemoteMonitoring {
                 body: body ? JSON.stringify(body) : undefined,
                 headers: headers
             });
-            const responseBody = (await response.json()) as object[] | undefined;
+            const responseBody = (await response.json()) as object | undefined;
             if (!response.ok || !responseBody) {
                 const err = new Error(
                     `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
@@ -132,5 +139,22 @@ export default class FicsitRemoteMonitoring {
         if (!response.ok) throw response.error;
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return response.responseBody as object[];
+    }
+
+    public async setSwitches(params: SetSwitchParams | SetSwitchParams[]) {
+        const fn = (value: SetSwitchParams) => {
+            return { ...value, id: undefined, ID: value.id };
+        };
+        const response = await this.doRequest(
+            "setSwitches",
+            "POST",
+            Array.isArray(params) ? params.map(fn) : fn(params),
+            true
+        );
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw<
+            { id: string; name?: string; status?: boolean; priority?: number }[]
+        >(response.responseBody);
     }
 }
