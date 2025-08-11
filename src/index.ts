@@ -126,4 +126,11 @@ export default class FicsitRemoteMonitoring {
     public async createPing(position: Coordinates) {
         await this.doRequest("createPing", "POST", position, true);
     }
+
+    public async setEnabled(id: string, status: boolean) {
+        const response = await this.doRequest("setEnabled", "POST", {"ID": id, "status": status}, true);
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return response.responseBody;
+    }
 }
