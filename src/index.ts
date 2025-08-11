@@ -128,7 +128,7 @@ export default class FicsitRemoteMonitoring {
     }
 
     public async setEnabled(id: string, status: boolean): Promise<object[]> {
-        const response = await this.doRequest("setEnabled", "POST", {"ID": id, "status": status}, true);
+        const response = await this.doRequest("setEnabled", "POST", { ID: id, status: status }, true);
         if (!response.ok) throw response.error;
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return response.responseBody as object[];
