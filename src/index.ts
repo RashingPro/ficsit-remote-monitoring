@@ -1,4 +1,4 @@
-import { ChatMessage, Color, Coordinates, Player } from "@/types";
+import { ChatMessage, Color, Coordinates, Player, SessionInfo } from "@/types";
 import util from "util";
 
 export * from "@/types";
@@ -164,5 +164,12 @@ export default class FicsitRemoteMonitoring {
         if (!response.ok) throw response.error;
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return FicsitRemoteMonitoring.parseBodyRaw<{ isSent: boolean; message: string }>(response.responseBody);
+    }
+
+    public async getSessionInfo(): Promise<SessionInfo> {
+        const response = await this.doRequest("getSessionInfo");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
     }
 }

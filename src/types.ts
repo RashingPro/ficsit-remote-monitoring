@@ -63,3 +63,18 @@ export interface Player extends BaseActor {
     dead: boolean;
     inventory: Inventory;
 }
+
+export interface SessionInfo {
+    sessionName: string;
+    isPaused: boolean;
+    dayLength: number;
+    nightLength: number;
+    passedDays: number;
+    numberOfDaysSinceLastDeath: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    isDay: boolean;
+    totalPlayDuration: number;
+    totalPlayDurationText: string;
+}
