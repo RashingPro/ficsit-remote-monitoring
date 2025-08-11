@@ -1,4 +1,4 @@
-import { ChatMessage, Player } from "@/types";
+import { ChatMessage, Coordinates, Player } from "@/types";
 import util from "node:util";
 import assert from "node:assert";
 
@@ -119,7 +119,11 @@ export default class FicsitRemoteMonitoring {
     public async getPlayers(): Promise<Player[]> {
         const response = await this.doRequest("getPlayer");
         if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error")
+        if (response.responseBody === undefined) throw new Error("Unknown error");
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+
+    public async createPing(position: Coordinates) {
+        await this.doRequest("createPing", "POST", position, true);
     }
 }
