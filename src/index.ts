@@ -27,6 +27,14 @@ export default class FicsitRemoteMonitoring {
 
     public readonly API_BASE_URL;
 
+    /**
+     * @param endpoint
+     * @param method
+     * @param body
+     * @param includeAuth
+     * @param error should method throw error (`true`) or return it (`false`)?
+     * @private
+     */
     private async doRequest(
         endpoint: string,
         method: "GET" | "POST" = "GET",
