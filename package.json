@@ -1,6 +1,6 @@
 {
   "name": "ficsit-remote-monitoring",
-  "version": "1.0.0-canary.2",
+  "version": "1.0.0-canary.3",
   "description": "Node.js interface for Satisfactory via Ficsit Remote Monitoring mod",
   "types": "./dist/index.d.ts",
   "exports": {
