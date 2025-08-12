@@ -65,6 +65,47 @@ export interface BaseBuilding extends BaseActor {
     boundingBox: BoundingBox;
 }
 
+export interface FactoryProduction {
+    name: string;
+    className: string;
+    amount: number;
+    maxAmount: number;
+    currentProd: number;
+    maxProd: number;
+    prodPercent: number;
+}
+
+export interface FactoryConsumption {
+    name: string;
+    className: string;
+    amount: number;
+    currentConsumed: number;
+    maxConsumed: number;
+    consPercent: number;
+}
+
+export interface PowerInfo {
+    circuitGroupID: number;
+    circuitID: number;
+    fuseTriggered: boolean;
+    powerConsumed: number;
+    maxPowerConsumed: number;
+}
+
+export interface FactoryBuilding extends BaseBuilding {
+    recipe: string;
+    recipeClassName: string;
+    production: FactoryProduction[];
+    ingredients: FactoryConsumption[];
+    manuSpeed: number;
+    somersloops: number;
+    powerShards: number;
+    isConfigured: boolean;
+    isProducing: boolean;
+    isPaused: boolean;
+    powerInfo: PowerInfo;
+}
+
 export interface InventoryItem {
     name: string;
     className: string;
