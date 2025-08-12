@@ -32,4 +32,21 @@ main();
 
 Implemented methods:
 
-- `getChatMessages`, `getPlayers`, `createPing`, `setEnabled`, `setSwitches`, `sendChatMessage`, `getSessionInfo`
+- `createPing`
+- `setEnabled`
+- `setSwitches`
+- `getChatMessages`
+- `sendChatMessage`
+- `getSessionInfo`
+- `getPlayers`
+- `getFactory`
+- `getAssemblers`
+- `getBlenders`
+- `getConstructors`
+- `getParticleAccelerators`
+- `getConverters`
+- `getFoundries`
+- `getManufacturers`
+- `getPackagers`
+- `getRefineries`
+- `getSmelters`
