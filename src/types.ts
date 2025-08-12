@@ -30,8 +30,7 @@ export interface Location {
     rotation: number;
 }
 
-export type HexColor =
-    `#${string}`;
+export type HexColor = `#${string}`;
 
 export interface ColorSlot {
     primaryColor: HexColor;
