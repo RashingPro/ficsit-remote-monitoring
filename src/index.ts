@@ -179,4 +179,64 @@ export default class FicsitRemoteMonitoring {
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
     }
+    public async getAssemblers(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getAssembler");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getBlenders(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getBlender");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getConstructors(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getConstructor");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getParticleAccelerators(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getParticle");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getConverters(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getConverter");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getFoundries(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getFoundry");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getManufacturers(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getManufacturer");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getPackagers(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getPackager");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getRefineries(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getRefinery");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getSmelters(): Promise<FactoryBuilding[]> {
+        const response = await this.doRequest("getSmelter");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
 }
