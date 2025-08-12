@@ -27,3 +27,9 @@ async function main() {
 
 main();
 ```
+
+## Developing progress
+
+Implemented methods:
+
+- `getChatMessages`, `getPlayers`, `createPing`, `setEnabled`, `setSwitches`, `sendChatMessage`, `getSessionInfo`
