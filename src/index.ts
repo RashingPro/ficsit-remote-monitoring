@@ -117,20 +117,6 @@ export default class FicsitRemoteMonitoring {
         return ping;
     }
 
-    public async getChatMessages(): Promise<ChatMessage[]> {
-        const response = await this.doRequest("getChatMessages");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
-    }
-
-    public async getPlayers(): Promise<Player[]> {
-        const response = await this.doRequest("getPlayer");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
-    }
-
     public async createPing(position: Coordinates) {
         await this.doRequest("createPing", "POST", position, true);
     }
@@ -141,7 +127,6 @@ export default class FicsitRemoteMonitoring {
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return response.responseBody as object[];
     }
-
     public async setSwitches(params: SetSwitchParams | SetSwitchParams[]) {
         const fn = (value: SetSwitchParams) => {
             return { ...value, id: undefined, ID: value.id };
@@ -159,6 +144,12 @@ export default class FicsitRemoteMonitoring {
         >(response.responseBody);
     }
 
+    public async getChatMessages(): Promise<ChatMessage[]> {
+        const response = await this.doRequest("getChatMessages");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
     public async sendChatMessage(message: string, params?: Partial<{ sender: "" | "ada" | string; color: Color }>) {
         const response = await this.doRequest("sendChatMessage", "POST", { message: message, ...params }, true);
         if (!response.ok) throw response.error;
@@ -168,6 +159,12 @@ export default class FicsitRemoteMonitoring {
 
     public async getSessionInfo(): Promise<SessionInfo> {
         const response = await this.doRequest("getSessionInfo");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+    public async getPlayers(): Promise<Player[]> {
+        const response = await this.doRequest("getPlayer");
         if (!response.ok) throw response.error;
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
