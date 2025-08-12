@@ -50,3 +50,4 @@ Implemented methods:
 - `getPackagers`
 - `getRefineries`
 - `getSmelters`
+- `getSwitches`

@@ -136,3 +136,13 @@ export interface SessionInfo {
     totalPlayDuration: number;
     totalPlayDurationText: string;
 }
+
+export interface Switch extends BaseBuilding {
+    switchTag: string;
+    isOn: boolean;
+    connected0: number;
+    connected1: number;
+    primary: number;
+    secondary: number;
+    priority: number;
+}

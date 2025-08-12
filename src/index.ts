@@ -1,4 +1,4 @@
-import { ChatMessage, Color, Coordinates, FactoryBuilding, Player, SessionInfo } from "@/types";
+import { ChatMessage, Color, Coordinates, FactoryBuilding, Player, SessionInfo, Switch } from "@/types";
 import util from "util";
 
 export * from "@/types";
@@ -232,6 +232,13 @@ export default class FicsitRemoteMonitoring {
     }
     public async getSmelters(): Promise<FactoryBuilding[]> {
         const response = await this.doRequest("getSmelter");
+        if (!response.ok) throw response.error;
+        if (response.responseBody === undefined) throw new Error("Unknown error");
+        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+    }
+
+    public async getSwitches(): Promise<Switch[]> {
+        const response = await this.doRequest("getSwitches");
         if (!response.ok) throw response.error;
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
