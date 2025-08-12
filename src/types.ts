@@ -30,6 +30,19 @@ export interface Location {
     rotation: number;
 }
 
+export type HexColor =
+    `#${string}`;
+
+export interface ColorSlot {
+    primaryColor: HexColor;
+    secondaryColor: HexColor;
+}
+
+export interface BoundingBox {
+    min: Coordinates;
+    max: Coordinates;
+}
+
 export interface BaseActor {
     id: string;
     name: string;
@@ -45,6 +58,11 @@ export interface BaseActor {
             type: "Point";
         };
     };
+}
+
+export interface BaseBuilding extends BaseActor {
+    colorSlot: ColorSlot;
+    boundingBox: BoundingBox;
 }
 
 export interface InventoryItem {
