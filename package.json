@@ -10,8 +10,13 @@
   },
   "license": "MIT",
   "scripts": {
-    "style": "prettier . --write",
-    "build": "tsup"
+    "format": "prettier . --write",
+    "lint": "eslint . --fix",
+    "cleanOutDir": "rimraf dist",
+    "build": "npm run cleanOutDir && rollup --config rollup.config.ts --configPlugin typescript",
+    "build+format": "npm run format && npm run build",
+    "build+format+lint": "npm run format && npm run lint && npm run build",
+    "knip": "knip"
   },
   "types": "./dist/index.d.ts",
   "exports": {
