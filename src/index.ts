@@ -1,4 +1,4 @@
-import { ChatMessage, Color, Coordinates, FactoryBuilding, Player, SessionInfo, Switch } from "@/types";
+import { ChatMessage, Color, Coordinates, FactoryBuilding, MaybeArray, Player, SessionInfo, Switch } from "@/types";
 import util from "util";
 
 export * from "@/types";
@@ -45,7 +45,7 @@ export default class FicsitRemoteMonitoring {
      * @param method
      * @param body
      * @param includeAuth
-     * @param error should method throw error (`true`) or return it (`false`)?
+     * @param throwError should method throw throwError (`true`) or return it (`false`)?
      * @private
      */
     private async doRequest(
@@ -53,9 +53,9 @@ export default class FicsitRemoteMonitoring {
         method: "GET" | "POST" = "GET",
         body?: object,
         includeAuth: boolean = false,
-        error: boolean = true
+        throwError: boolean = true
     ): Promise<FicsitRemoteMonitoringResponse> {
-        let headers: HeadersInit = {};
+        const headers: HeadersInit = {};
         if (includeAuth) {
             if (!this.token) throw new Error("No token specified");
             headers["X-FRM-Authorization"] = this.token;
@@ -71,13 +71,13 @@ export default class FicsitRemoteMonitoring {
                 const err = new Error(
                     `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
                 );
-                if (error) {
+                if (throwError) {
                     throw err;
                 } else return { ok: false, response: response, responseBody: response, error: err };
             }
             return { ok: true, response: response, responseBody: responseBody };
         } catch (err) {
-            if (!error) return { ok: false, error: err as Error };
+            if (!throwError) return { ok: false, error: err as Error };
             if (
                 err instanceof TypeError &&
                 util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
@@ -96,7 +96,7 @@ export default class FicsitRemoteMonitoring {
             if (typeof entry === "object") {
                 return Object.fromEntries(
                     Object.entries(entry).map(([key, value]) => {
-                        let newKey = key == "ID" ? "id" : key.charAt(0).toLowerCase() + key.slice(1);
+                        const newKey = key == "ID" ? "id" : key.charAt(0).toLowerCase() + key.slice(1);
                         return [newKey, this.parseBodyRawEntry(value)];
                     })
                 );
@@ -127,7 +127,7 @@ export default class FicsitRemoteMonitoring {
         if (response.responseBody === undefined) throw new Error("Unknown error");
         return response.responseBody as object[];
     }
-    public async setSwitches(params: SetSwitchParams | SetSwitchParams[]) {
+    public async setSwitches(params: MaybeArray<SetSwitchParams>) {
         const fn = (value: SetSwitchParams) => {
             return { ...value, id: undefined, ID: value.id };
         };
