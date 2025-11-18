@@ -1,3 +1,5 @@
+export type MaybeArray<T> = T | T[];
+
 export interface Color {
     r: number;
     g: number;

@@ -2,6 +2,22 @@
   "name": "ficsit-remote-monitoring",
   "version": "1.4.0",
   "description": "Node.js interface for Satisfactory via Ficsit Remote Monitoring mod",
+  "packageManager": "pnpm@10.20.0",
+  "author": {
+    "name": "RashingPro",
+    "url": "https://rashing.pro/",
+    "email": "contact@rashing.pro"
+  },
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier . --write",
+    "lint": "eslint . --fix",
+    "cleanOutDir": "rimraf dist",
+    "build": "npm run cleanOutDir && rollup --config rollup.config.ts --configPlugin typescript",
+    "build+format": "npm run format && npm run build",
+    "build+format+lint": "npm run format && npm run lint && npm run build",
+    "knip": "knip"
+  },
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -11,24 +27,28 @@
       "default": "./dist/index.mjs"
     }
   },
-  "author": {
-    "name": "RashingPro",
-    "url": "https://rashing.pro/",
-    "email": "contact@rashing.pro"
-  },
-  "license": "MIT",
-  "scripts": {
-    "style": "prettier . --write",
-    "build": "tsup"
-  },
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@commitlint/types": "^20.0.0",
+    "@eslint/js": "^9.39.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "husky": "^9.1.7",
+    "jiti": "^2.6.1",
+    "knip": "^5.70.0",
+    "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
     "prettier-plugin-unused-imports-configurable": "^1.15.0",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "util": "^0.12.5"
+    "rimraf": "^6.1.0",
+    "rollup": "^4.53.2",
+    "rollup-plugin-dts": "^6.2.3",
+    "rollup-plugin-dts-minify": "^1.0.1",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.47.0"
   }
 }
