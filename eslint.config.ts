@@ -1,6 +1,8 @@
 import js from "@eslint/js";
-import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
+import imports from "eslint-plugin-import";
+import unusedImports from "eslint-plugin-unused-imports";
+import tseslint from "typescript-eslint";
 
 export default defineConfig([
     {
@@ -10,6 +12,10 @@ export default defineConfig([
     },
     tseslint.configs.recommended,
     {
+        plugins: {
+            "unused-imports": unusedImports,
+            import: imports
+        },
         rules: {
             "@typescript-eslint/explicit-member-accessibility": "error",
             "@typescript-eslint/no-unused-vars": "warn",
@@ -19,10 +25,18 @@ export default defineConfig([
             "no-empty-function": "off",
             "@typescript-eslint/no-empty-function": "off",
             "@typescript-eslint/no-namespace": "off",
-            "no-undef": "off"
+            "no-undef": "off",
+            "unused-imports/no-unused-imports": "error",
+            "import/order": [
+                "error",
+                {
+                    groups: ["builtin", "external", "internal", "parent", "sibling", "index", "object", "type"]
+                }
+            ],
+            "import/newline-after-import": "error"
         }
     },
     {
-        ignores: ["dist/*", "skeleton/*"]
+        ignores: ["dist/*"]
     }
 ]);
