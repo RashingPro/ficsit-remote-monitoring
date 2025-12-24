@@ -37,6 +37,9 @@
     "LICENSE",
     "README.md"
   ],
+  "dependencies": {
+    "zod": "^4.2.1"
+  },
   "devDependencies": {
     "@commitlint/cli": "^20.2.0",
     "@commitlint/config-conventional": "^20.2.0",
