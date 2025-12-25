@@ -20,7 +20,8 @@
     "build": "npm run cleanOutDir && rollup --config rollup.config.ts --configPlugin typescript",
     "build+format": "npm run format && npm run build",
     "build+format+lint": "npm run format && npm run lint && npm run build",
-    "knip": "knip"
+    "knip": "knip",
+    "test": "jest"
   },
   "types": "./dist/index.d.ts",
   "exports": {
@@ -47,11 +48,13 @@
     "@eslint/js": "^9.39.2",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.3.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.4",
     "eslint": "^9.39.2",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-unused-imports": "^4.3.0",
     "husky": "^9.1.7",
+    "jest": "^30.2.0",
     "jiti": "^2.6.1",
     "knip": "^5.77.1",
     "lint-staged": "^16.2.7",
@@ -60,6 +63,8 @@
     "rollup": "^4.54.0",
     "rollup-plugin-dts": "^6.3.0",
     "rollup-plugin-dts-minify": "^1.0.1",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.1"
