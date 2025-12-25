@@ -23,6 +23,7 @@
     "knip": "knip",
     "test": "jest"
   },
+  "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
