@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/RashingPro/ficsit-remote-monitoring"
+    "url": "git+https://github.com/RashingPro/ficsit-remote-monitoring.git"
   },
   "license": "MIT",
   "scripts": {
