@@ -41,7 +41,9 @@ export default defineConfig([
             "import/order": [
                 "error",
                 {
-                    groups: ["builtin", "external", "internal", "parent", "sibling", "index", "object", "type"]
+                    groups: ["builtin", "external", "internal", "parent", "sibling", "index", "object", "type"],
+                    "newlines-between": "always",
+                    alphabetize: { order: "asc" }
                 }
             ],
             "import/newline-after-import": "error",
