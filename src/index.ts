@@ -1,5 +1,29 @@
-import util from "util";
-import { ChatMessage, Color, Coordinates, FactoryBuilding, MaybeArray, Player, SessionInfo, Switch } from "@/types";
+import * as z from "zod";
+
+import {
+    ChatMessage,
+    ChatMessageSchema,
+    Color,
+    Coordinates,
+    FactoryBuilding,
+    FactoryBuildingSchema,
+    HttpRequestMethod,
+    MaybeArray,
+    ObjectArraySchema,
+    Player,
+    PlayerSchema,
+    SendChatMessageResponse,
+    SendChatMessageResponseSchema,
+    SessionInfo,
+    SessionInfoSchema,
+    SetSwitchParams,
+    SetSwitchResponse,
+    SetSwitchResponseSchema,
+    Switch,
+    SwitchSchema,
+    validateIsObject,
+    validateIsObjectArray
+} from "@/types";
 
 export * from "@/types";
 
@@ -16,71 +40,97 @@ export type FicsitRemoteMonitoringResponse =
           error: Error;
       };
 
-export interface SetSwitchParams {
-    id: string;
-    name?: string;
-    priority?: number;
-    status?: boolean;
+export class FicsitRemoteMonitoringRequestError extends Error {
+    public constructor(
+        code: number,
+        errorMessage: string,
+        public readonly rawErrorBody: unknown
+    ) {
+        super(`Ficsit Remote Monitoring API respond with code ${code}: ${errorMessage}`);
+    }
 }
 
 export default class FicsitRemoteMonitoring {
     /**
      * @param port
      * @param token Required only for [these endpoints](https://docs.ficsit.app/ficsitremotemonitoring/latest/json/Write/Write.html). More about it [here](https://docs.ficsit.app/ficsitremotemonitoring/latest/json/authentication.html)
-     * @param baseUrl url in format http://some-url or https://some-url/some/subpage. Do **NOT** put slash or port in the end
-     * @param util
+     * @param baseUrl url in format http://some-url or https://some-url/some/subpage. Do **NOT** put port in the end
      */
     public constructor(
         public readonly port: number = 8080,
         public readonly token?: string,
         baseUrl: string = "http://localhost"
     ) {
+        while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, baseUrl.length - 1);
         this.API_BASE_URL = `${baseUrl}:${port}`;
     }
 
     public readonly API_BASE_URL;
 
-    /**
-     * @param endpoint
-     * @param method
-     * @param body
-     * @param includeAuth
-     * @param throwError should method throw throwError (`true`) or return it (`false`)?
-     * @private
-     */
-    private async doRequest(
+    protected static buildUrl(baseUrl: string, endpoint: string): string {
+        return new URL(endpoint, baseUrl).href;
+    }
+
+    private async makeRequest(
         endpoint: string,
-        method: "GET" | "POST" = "GET",
+        method?: HttpRequestMethod,
         body?: object,
-        includeAuth: boolean = false,
-        throwError: boolean = true
-    ): Promise<FicsitRemoteMonitoringResponse> {
-        const headers: HeadersInit = {};
-        if (includeAuth) {
-            if (!this.token) throw new Error("No token specified");
-            headers["X-FRM-Authorization"] = this.token;
+        config?: {
+            includeAuth?: boolean;
+            validationSchema?: z.ZodType;
+            responseIsOkValidator?: (res: Response) => boolean;
         }
+    ): Promise<unknown>;
+    private async makeRequest<T extends z.ZodType>(
+        endpoint: string,
+        method: HttpRequestMethod,
+        body: object | undefined,
+        config: {
+            includeAuth?: boolean;
+            validationSchema: T;
+            responseIsOkValidator?: (res: Response) => boolean;
+        }
+    ): Promise<z.infer<T>>;
+
+    private async makeRequest(
+        endpoint: string,
+        method: HttpRequestMethod = "GET",
+        body?: object,
+        config?: {
+            includeAuth?: boolean;
+            validationSchema?: z.ZodType;
+            responseIsOkValidator?: (res: Response) => boolean;
+        }
+    ) {
+        const headers: Headers = new Headers();
+        if (config?.includeAuth) {
+            if (!this.token) throw new Error("Token was not provided");
+            headers.set("X-FRM-Authorization", this.token);
+        }
+
         try {
-            const response = await fetch(`${this.API_BASE_URL}/${endpoint}`, {
+            const res = await fetch(FicsitRemoteMonitoring.buildUrl(this.API_BASE_URL, endpoint), {
                 method: method,
                 body: body ? JSON.stringify(body) : undefined,
                 headers: headers
             });
-            const responseBody = (await response.json()) as object | undefined;
-            if (!response.ok || !responseBody) {
-                const err = new Error(
-                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
+            const resBody = await res.json();
+            if (typeof resBody !== "object" || !(config?.responseIsOkValidator ?? (r => r.ok))(res))
+                throw new FicsitRemoteMonitoringRequestError(
+                    res.status,
+                    resBody.error ?? "No error message provided in response body",
+                    resBody
                 );
-                if (throwError) {
-                    throw err;
-                } else return { ok: false, response: response, responseBody: response, error: err };
-            }
-            return { ok: true, response: response, responseBody: responseBody };
+            const formatedBody = FicsitRemoteMonitoring.formatBodyRaw(resBody);
+            return config?.validationSchema
+                ? FicsitRemoteMonitoring.validateBody(formatedBody, config.validationSchema)
+                : formatedBody;
         } catch (err) {
-            if (!throwError) return { ok: false, error: err as Error };
             if (
                 err instanceof TypeError &&
-                util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
+                err.cause instanceof AggregateError &&
+                // @ts-expect-error If connection fails, AggregateError actually has `code` property
+                err.cause["code"] == "ECONNREFUSED"
             ) {
                 throw new TypeError(err.message + ". [31mIs the Ficsit Remote Monitoring server running?[0m", {
                     cause: err.cause
@@ -89,158 +139,173 @@ export default class FicsitRemoteMonitoring {
         }
     }
 
-    public static parseBodyRawEntry(entry: object): object {
-        if (Array.isArray(entry)) {
-            return entry.map(val => this.parseBodyRawEntry(val));
+    public static formatBodyRaw(body: object): object;
+    public static formatBodyRaw(body: object[]): object[];
+
+    public static formatBodyRaw(body: MaybeArray<object>): MaybeArray<object> {
+        if (Array.isArray(body)) {
+            return body.map(val => this.formatBodyRaw(val));
         } else {
-            if (typeof entry === "object") {
+            if (typeof body === "object") {
                 return Object.fromEntries(
-                    Object.entries(entry).map(([key, value]) => {
+                    Object.entries(body).map(([key, value]) => {
                         const newKey = key == "ID" ? "id" : key.charAt(0).toLowerCase() + key.slice(1);
-                        return [newKey, this.parseBodyRawEntry(value)];
+                        return [newKey, this.formatBodyRaw(value)];
                     })
                 );
-            } else return entry;
+            } else return body;
         }
     }
 
-    public static parseBodyRaw<T>(body: object): T {
-        return this.parseBodyRawEntry(body) as T;
+    public static validateBody(body: unknown, schema: z.ZodType) {
+        return z.parse(schema, body);
     }
 
     public async ping(): Promise<number> {
         const before = new Date();
-        const response = await this.doRequest("/ping", "GET", undefined, false, false);
-        if (!response.responseBody) return -1;
+        await this.makeRequest("ping", "GET", undefined, { responseIsOkValidator: r => r.status < 500 });
         const after = new Date();
-        const ping = after.valueOf() - before.valueOf();
-        return ping;
+        return after.valueOf() - before.valueOf();
     }
 
     public async createPing(position: Coordinates) {
-        await this.doRequest("createPing", "POST", position, true);
+        await this.makeRequest("createPing", "POST", position, { includeAuth: true });
     }
 
     public async setEnabled(id: string, status: boolean): Promise<object[]> {
-        const response = await this.doRequest("setEnabled", "POST", { ID: id, status: status }, true);
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return response.responseBody as object[];
+        const response = await this.makeRequest(
+            "setEnabled",
+            "POST",
+            { ID: id, status: status },
+            { includeAuth: true }
+        );
+        return z.parse(ObjectArraySchema, response);
     }
-    public async setSwitches(params: MaybeArray<SetSwitchParams>) {
+    public async setSwitches(params: MaybeArray<SetSwitchParams>): Promise<SetSwitchResponse> {
         const fn = (value: SetSwitchParams) => {
             return { ...value, id: undefined, ID: value.id };
         };
-        const response = await this.doRequest(
+        const response = await this.makeRequest(
             "setSwitches",
             "POST",
             Array.isArray(params) ? params.map(fn) : fn(params),
-            true
+            { includeAuth: true }
         );
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw<
-            { id: string; name?: string; status?: boolean; priority?: number }[]
-        >(response.responseBody);
+        return z.parse(
+            SetSwitchResponseSchema,
+            FicsitRemoteMonitoring.formatBodyRaw(z.parse(ObjectArraySchema, response))
+        );
     }
 
     public async getChatMessages(): Promise<ChatMessage[]> {
-        const response = await this.doRequest("getChatMessages");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getChatMessages");
+        return z.parse(
+            z.array(ChatMessageSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(z.parse(ObjectArraySchema, response))
+        );
     }
-    public async sendChatMessage(message: string, params?: Partial<{ sender: "" | "ada" | string; color: Color }>) {
-        const response = await this.doRequest("sendChatMessage", "POST", { message: message, ...params }, true);
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw<{ isSent: boolean; message: string }>(response.responseBody);
+    public async sendChatMessage(
+        message: string,
+        params?: Partial<{ sender: "" | "ada" | string; color: Color }>
+    ): Promise<SendChatMessageResponse> {
+        const response = await this.makeRequest(
+            "sendChatMessage",
+            "POST",
+            { message: message, ...params },
+            { includeAuth: true }
+        );
+        return z.parse(SendChatMessageResponseSchema, FicsitRemoteMonitoring.formatBodyRaw(validateIsObject(response)));
     }
 
     public async getSessionInfo(): Promise<SessionInfo> {
-        const response = await this.doRequest("getSessionInfo");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getSessionInfo");
+        return z.parse(SessionInfoSchema, FicsitRemoteMonitoring.formatBodyRaw(validateIsObject(response)));
     }
     public async getPlayers(): Promise<Player[]> {
-        const response = await this.doRequest("getPlayer");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getPlayer");
+        return z.parse(z.array(PlayerSchema), FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response)));
     }
 
     public async getFactory(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getFactory");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getFactory");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getAssemblers(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getAssembler");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getAssembler");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getBlenders(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getBlender");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getBlender");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getConstructors(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getConstructor");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getConstructor");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getParticleAccelerators(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getParticle");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getParticle");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getConverters(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getConverter");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getConverter");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getFoundries(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getFoundry");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getFoundry");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getManufacturers(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getManufacturer");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getManufacturer");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getPackagers(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getPackager");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getPackager");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getRefineries(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getRefinery");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getRefinery");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
     public async getSmelters(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getSmelter");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getSmelter");
+        return z.parse(
+            z.array(FactoryBuildingSchema),
+            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
+        );
     }
 
     public async getSwitches(): Promise<Switch[]> {
-        const response = await this.doRequest("getSwitches");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        const response = await this.makeRequest("getSwitches");
+        return z.parse(z.array(SwitchSchema), FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response)));
     }
 }
