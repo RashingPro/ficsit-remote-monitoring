@@ -1,5 +1,5 @@
-import { ChatMessage, Color, Coordinates, FactoryBuilding, MaybeArray, Player, SessionInfo, Switch } from "@/types";
 import util from "util";
+import { ChatMessage, Color, Coordinates, FactoryBuilding, MaybeArray, Player, SessionInfo, Switch } from "@/types";
 
 export * from "@/types";
 

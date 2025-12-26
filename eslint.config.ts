@@ -1,14 +1,16 @@
 import js from "@eslint/js";
-import { defineConfig } from "eslint/config";
 import imports from "eslint-plugin-import";
 import unusedImports from "eslint-plugin-unused-imports";
+import { defineConfig } from "eslint/config";
+import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
     {
         files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
         plugins: { js },
-        extends: ["js/recommended"]
+        extends: ["js/recommended"],
+        languageOptions: { globals: globals.node }
     },
     tseslint.configs.recommended,
     {
@@ -26,6 +28,14 @@ export default defineConfig([
             "@typescript-eslint/no-empty-function": "off",
             "@typescript-eslint/no-namespace": "off",
             "no-undef": "off",
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector: 'MethodDefinition[kind="get"], MethodDefinition[kind="set"]',
+                    message:
+                        "Getters and setters could create not obvious code execution flow. Please replace with method."
+                }
+            ],
             "unused-imports/no-unused-imports": "error",
             "unused-imports/no-unused-vars": "warn",
             "import/order": [
