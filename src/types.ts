@@ -47,11 +47,11 @@ export const LocationSchema = z.object({
     x: z.number(),
     y: z.number(),
     z: z.number(),
-    location: z.number()
+    rotation: z.number()
 });
 export type Location = z.infer<typeof CoordinatesSchema>;
 
-export const HexColorSchema = z.string().startsWith("#").length(9);
+export const HexColorSchema = z.string().length(8);
 export type HexColor = z.infer<typeof HexColorSchema>;
 
 export const ColorSlotSchema = z.object({
@@ -94,7 +94,6 @@ export const FactoryProductionSchema = z.object({
     name: z.string(),
     className: z.string(),
     amount: z.number(),
-    maxAmount: z.number(),
     currentProd: z.number(),
     maxProd: z.number(),
     prodPercent: z.number()
@@ -123,8 +122,8 @@ export type PowerInfo = z.infer<typeof PowerInfoSchema>;
 export const FactoryBuildingSchema = BaseBuildingSchema.safeExtend({
     recipe: z.string(),
     recipeClassName: z.string(),
-    production: FactoryProductionSchema,
-    ingredients: FactoryConsumptionSchema,
+    production: z.array(FactoryProductionSchema),
+    ingredients: z.array(FactoryConsumptionSchema),
     manuSpeed: z.number(),
     somersloops: z.number(),
     powerShards: z.number(),
