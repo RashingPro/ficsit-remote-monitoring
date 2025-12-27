@@ -36,6 +36,15 @@ export default [
             dir: outDir,
             format: "es"
         },
-        plugins: [dtsPlugin(), dtsMinifyPlugin()]
+        plugins: [
+            dtsPlugin({
+                compilerOptions: {
+                    paths: {
+                        "@/*": ["src/*"]
+                    }
+                }
+            }),
+            dtsMinifyPlugin()
+        ]
     }
 ] as (RollupOptions & RollupTypescriptOptions)[];
