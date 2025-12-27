@@ -3,26 +3,26 @@ import * as z from "zod";
 import {
     ChatMessage,
     ChatMessageSchema,
-    Color,
     Coordinates,
     FactoryBuilding,
     FactoryBuildingSchema,
     HttpRequestMethod,
     MaybeArray,
-    ObjectArraySchema,
     Player,
     PlayerSchema,
+    SendChatMessageParams,
     SendChatMessageResponse,
     SendChatMessageResponseSchema,
     SessionInfo,
     SessionInfoSchema,
+    SetEnabledParams,
+    SetEnabledResponse,
+    SetEnabledResponseSchema,
     SetSwitchParams,
     SetSwitchResponse,
     SetSwitchResponseSchema,
     Switch,
-    SwitchSchema,
-    validateIsObject,
-    validateIsObjectArray
+    SwitchSchema
 } from "@/types";
 
 export * from "@/types";
@@ -73,19 +73,18 @@ export default class FicsitRemoteMonitoring {
 
     private async makeRequest(
         endpoint: string,
-        method?: HttpRequestMethod,
-        body?: object,
-        config?: {
+        options?: {
+            method?: HttpRequestMethod;
+            body?: object;
             includeAuth?: boolean;
-            validationSchema?: z.ZodType;
             responseIsOkValidator?: (res: Response) => boolean;
         }
     ): Promise<unknown>;
     private async makeRequest<T extends z.ZodType>(
         endpoint: string,
-        method: HttpRequestMethod,
-        body: object | undefined,
-        config: {
+        options: {
+            method?: HttpRequestMethod;
+            body?: object;
             includeAuth?: boolean;
             validationSchema: T;
             responseIsOkValidator?: (res: Response) => boolean;
@@ -94,36 +93,36 @@ export default class FicsitRemoteMonitoring {
 
     private async makeRequest(
         endpoint: string,
-        method: HttpRequestMethod = "GET",
-        body?: object,
-        config?: {
+        options?: {
+            method?: HttpRequestMethod;
+            body?: object;
             includeAuth?: boolean;
             validationSchema?: z.ZodType;
             responseIsOkValidator?: (res: Response) => boolean;
         }
     ) {
         const headers: Headers = new Headers();
-        if (config?.includeAuth) {
+        if (options?.includeAuth) {
             if (!this.token) throw new Error("Token was not provided");
             headers.set("X-FRM-Authorization", this.token);
         }
 
         try {
             const res = await fetch(FicsitRemoteMonitoring.buildUrl(this.API_BASE_URL, endpoint), {
-                method: method,
-                body: body ? JSON.stringify(body) : undefined,
+                method: options?.method ?? "GET",
+                body: options?.body ? JSON.stringify(options.body) : undefined,
                 headers: headers
             });
             const resBody = await res.json();
-            if (typeof resBody !== "object" || !(config?.responseIsOkValidator ?? (r => r.ok))(res))
+            if (typeof resBody !== "object" || !(options?.responseIsOkValidator ?? (r => r.ok))(res))
                 throw new FicsitRemoteMonitoringRequestError(
                     res.status,
                     resBody.error ?? "No error message provided in response body",
                     resBody
                 );
             const formatedBody = FicsitRemoteMonitoring.formatBodyRaw(resBody);
-            return config?.validationSchema
-                ? FicsitRemoteMonitoring.validateBody(formatedBody, config.validationSchema)
+            return options?.validationSchema
+                ? FicsitRemoteMonitoring.validateBody(formatedBody, options.validationSchema)
                 : formatedBody;
         } catch (err) {
             if (
@@ -163,149 +162,95 @@ export default class FicsitRemoteMonitoring {
 
     public async ping(): Promise<number> {
         const before = new Date();
-        await this.makeRequest("ping", "GET", undefined, { responseIsOkValidator: r => r.status < 500 });
+        await this.makeRequest("ping", { responseIsOkValidator: r => r.status < 500 });
         const after = new Date();
         return after.valueOf() - before.valueOf();
     }
 
     public async createPing(position: Coordinates) {
-        await this.makeRequest("createPing", "POST", position, { includeAuth: true });
+        await this.makeRequest("createPing", { includeAuth: true, method: "POST", body: position });
     }
 
-    public async setEnabled(id: string, status: boolean): Promise<object[]> {
-        const response = await this.makeRequest(
-            "setEnabled",
-            "POST",
-            { ID: id, status: status },
-            { includeAuth: true }
-        );
-        return z.parse(ObjectArraySchema, response);
-    }
-    public async setSwitches(params: MaybeArray<SetSwitchParams>): Promise<SetSwitchResponse> {
-        const fn = (value: SetSwitchParams) => {
-            return { ...value, id: undefined, ID: value.id };
-        };
-        const response = await this.makeRequest(
-            "setSwitches",
-            "POST",
-            Array.isArray(params) ? params.map(fn) : fn(params),
-            { includeAuth: true }
-        );
-        return z.parse(
-            SetSwitchResponseSchema,
-            FicsitRemoteMonitoring.formatBodyRaw(z.parse(ObjectArraySchema, response))
-        );
+    public async setEnabled(params: MaybeArray<SetEnabledParams>): Promise<SetEnabledResponse[]> {
+        const fn = (value: SetSwitchParams) => ({ ...value, id: undefined, ID: value.id });
+
+        return await this.makeRequest("setEnabled", {
+            includeAuth: true,
+            method: "POST",
+            body: Array.isArray(params) ? params.map(fn) : fn(params),
+            validationSchema: z.array(SetEnabledResponseSchema)
+        });
     }
 
     public async getChatMessages(): Promise<ChatMessage[]> {
-        const response = await this.makeRequest("getChatMessages");
-        return z.parse(
-            z.array(ChatMessageSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(z.parse(ObjectArraySchema, response))
-        );
+        return await this.makeRequest("getChatMessages", {
+            validationSchema: z.array(ChatMessageSchema)
+        });
     }
-    public async sendChatMessage(
-        message: string,
-        params?: Partial<{ sender: "" | "ada" | string; color: Color }>
-    ): Promise<SendChatMessageResponse> {
-        const response = await this.makeRequest(
-            "sendChatMessage",
-            "POST",
-            { message: message, ...params },
-            { includeAuth: true }
-        );
-        return z.parse(SendChatMessageResponseSchema, FicsitRemoteMonitoring.formatBodyRaw(validateIsObject(response)));
+    public async sendChatMessage(params: MaybeArray<SendChatMessageParams>): Promise<SendChatMessageResponse[]> {
+        const fn = (v: SendChatMessageParams) => ({ message: v.message, ...v.options });
+
+        return await this.makeRequest("sendChatMessage", {
+            method: "POST",
+            body: Array.isArray(params) ? params.map(fn) : fn(params),
+            includeAuth: true,
+            validationSchema: z.array(SendChatMessageResponseSchema)
+        });
     }
 
     public async getSessionInfo(): Promise<SessionInfo> {
-        const response = await this.makeRequest("getSessionInfo");
-        return z.parse(SessionInfoSchema, FicsitRemoteMonitoring.formatBodyRaw(validateIsObject(response)));
+        return await this.makeRequest("getSessionInfo", { validationSchema: SessionInfoSchema });
     }
     public async getPlayers(): Promise<Player[]> {
-        const response = await this.makeRequest("getPlayer");
-        return z.parse(z.array(PlayerSchema), FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response)));
+        return await this.makeRequest("getPlayer", { validationSchema: z.array(PlayerSchema) });
     }
 
     public async getFactory(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getFactory");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getFactory", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getAssemblers(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getAssembler");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getAssembler", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getBlenders(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getBlender");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getBlender", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getConstructors(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getConstructor");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getConstructor", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getParticleAccelerators(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getParticle");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getParticle", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getConverters(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getConverter");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getConverter", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getFoundries(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getFoundry");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getFoundry", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getManufacturers(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getManufacturer");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getManufacturer", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getPackagers(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getPackager");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getPackager", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getRefineries(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getRefinery");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getRefinery", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getSmelters(): Promise<FactoryBuilding[]> {
-        const response = await this.makeRequest("getSmelter");
-        return z.parse(
-            z.array(FactoryBuildingSchema),
-            FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response))
-        );
+        return await this.makeRequest("getSmelter", { validationSchema: z.array(FactoryBuildingSchema) });
     }
 
     public async getSwitches(): Promise<Switch[]> {
-        const response = await this.makeRequest("getSwitches");
-        return z.parse(z.array(SwitchSchema), FicsitRemoteMonitoring.formatBodyRaw(validateIsObjectArray(response)));
+        return await this.makeRequest("getSwitches", { validationSchema: z.array(SwitchSchema) });
+    }
+    public async setSwitches(params: MaybeArray<SetSwitchParams>): Promise<SetSwitchResponse[]> {
+        const fn = (value: SetSwitchParams) => {
+            return { ...value, id: undefined, ID: value.id };
+        };
+        return await this.makeRequest("setSwitches", {
+            method: "POST",
+            body: Array.isArray(params) ? params.map(fn) : fn(params),
+            includeAuth: true,
+            validationSchema: z.array(SetSwitchResponseSchema)
+        });
     }
 }

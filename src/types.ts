@@ -5,9 +5,7 @@ export type MaybeArray<T> = T | T[];
 export type HttpRequestMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export const ObjectSchema = z.looseObject({});
-export const validateIsObject = (value: unknown) => z.parse(ObjectSchema, value);
 export const ObjectArraySchema = z.array(ObjectSchema);
-export const validateIsObjectArray = (value: unknown) => z.parse(ObjectArraySchema, value);
 
 export const ColorSchema = z.object({
     r: z.number(),
@@ -195,3 +193,19 @@ export const SetSwitchResponseSchema = z.object({
     priority: z.number().optional()
 });
 export type SetSwitchResponse = z.infer<typeof SetSwitchResponseSchema>;
+
+export interface SendChatMessageParams {
+    message: string;
+    options?: Partial<{ sender: "" | "ada" | string; color: Color }>;
+}
+
+export interface SetEnabledParams {
+    id: string;
+    status?: boolean;
+}
+
+export const SetEnabledResponseSchema = z.object({
+    id: z.string(),
+    status: z.boolean()
+});
+export type SetEnabledResponse = z.infer<typeof SetEnabledResponseSchema>;
