@@ -94,7 +94,28 @@ describe("Root test suit", () => {
                     }
                 ]
             });
-            await testEnv.setEnabled("Build_ConstructorMk1_C_0", true);
+            await testEnv.setEnabled({ id: "Build_ConstructorMk1_C_0", status: true });
+            expect(fetch).toHaveBeenCalledWith(`${baseUrl}:${port}/setEnabled`, expect.any(Object));
+        });
+
+        it("/setEnabled (array)", async () => {
+            mockFetch({
+                status: 200,
+                json: async () => [
+                    {
+                        ID: "Build_ConstructorMk1_C_0",
+                        Status: true
+                    },
+                    {
+                        ID: "Build_ConstructorMk1_C_1",
+                        Status: false
+                    }
+                ]
+            });
+            await testEnv.setEnabled([
+                { id: "Build_ConstructorMk1_C_0", status: true },
+                { id: "Build_ConstructorMk1_C_1", status: false }
+            ]);
             expect(fetch).toHaveBeenCalledWith(`${baseUrl}:${port}/setEnabled`, expect.any(Object));
         });
 
@@ -132,6 +153,41 @@ describe("Root test suit", () => {
             });
             await testEnv.getChatMessages();
             expect(fetch).toHaveBeenCalledWith(`${baseUrl}:${port}/getChatMessages`, expect.any(Object));
+        });
+
+        it("/getChatMessages (validation error)", async () => {
+            mockFetch({
+                status: 200,
+                json: async () => [
+                    {
+                        TimeStamp: 0,
+                        ServerTimeStamp: 0,
+                        Sender: 1, // error here
+                        Type: "System",
+                        Message: "HTTP Service Initiated on Port: 8080",
+                        Color: {
+                            R: 0,
+                            G: 1,
+                            B: 0,
+                            A: 1
+                        }
+                    },
+                    {
+                        TimeStamp: 0,
+                        ServerTimeStamp: 0,
+                        Sender: "",
+                        Type: "System",
+                        Message: "Stopping HTTP Service.",
+                        Color: {
+                            R: 1,
+                            G: 1,
+                            B: 1,
+                            A: 1
+                        }
+                    }
+                ]
+            });
+            await expect(testEnv.getChatMessages).rejects.toThrow();
         });
 
         it("/getFactory", async () => {
