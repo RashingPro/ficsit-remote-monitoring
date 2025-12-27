@@ -8,6 +8,14 @@
     "url": "https://rashing.pro/",
     "email": "contact@rashing.pro"
   },
+  "keywords": [
+    "typescript",
+    "api",
+    "interface",
+    "satisfactory",
+    "ficsit",
+    "mod"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RashingPro/ficsit-remote-monitoring.git"
