@@ -15,7 +15,8 @@ export default [
         },
         plugins: [
             typescriptPlugin({
-                noEmitOnError: true
+                noEmitOnError: true,
+                rootDir: "src"
             }),
             terserPlugin({
                 keep_classnames: /^.*Error$/,
