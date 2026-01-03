@@ -18,7 +18,7 @@
 
 ## Info
 
-This package is a Node.js interface for Satisfactory's mod called [Ficsit Remote Monitoring](https://ficsit.app/mod/FicsitRemoteMonitoring). There are also TypeScript types included.
+This package provides a well-typed Node.js interface for Satisfactory's mod called [Ficsit Remote Monitoring](https://ficsit.app/mod/FicsitRemoteMonitoring) with schema validation.
 
 ## Using
 
@@ -34,8 +34,14 @@ npm i ficsit-remote-monitoring
 import FicsitRemoteMonitoring from "ficsit-remote-monitoring";
 
 async function main() {
-    const frm = new FicsitRemoteMonitoring();
+    const frm = new FicsitRemoteMonitoring(8080, "my token goes here");
     console.log(await frm.ping());
+
+    const factory = (await frm.getFactory())[0];
+    await frm.setEnabled({
+        id: res.id,
+        status: res.isPaused
+    });
 }
 
 main();
