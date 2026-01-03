@@ -1,16 +1,24 @@
 {
   "name": "ficsit-remote-monitoring",
-  "version": "1.4.1",
+  "version": "2.0.0-canary.1",
   "description": "Node.js interface for Satisfactory via Ficsit Remote Monitoring mod",
-  "packageManager": "pnpm@10.20.0",
+  "packageManager": "pnpm@10.26.2",
   "author": {
     "name": "RashingPro",
     "url": "https://rashing.pro/",
     "email": "contact@rashing.pro"
   },
+  "keywords": [
+    "typescript",
+    "api",
+    "interface",
+    "satisfactory",
+    "ficsit",
+    "mod"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/RashingPro/ficsit-remote-monitoring"
+    "url": "git+https://github.com/RashingPro/ficsit-remote-monitoring.git"
   },
   "license": "MIT",
   "scripts": {
@@ -20,15 +28,17 @@
     "build": "npm run cleanOutDir && rollup --config rollup.config.ts --configPlugin typescript",
     "build+format": "npm run format && npm run build",
     "build+format+lint": "npm run format && npm run lint && npm run build",
-    "knip": "knip"
+    "knip": "knip",
+    "test": "jest"
   },
+  "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
-      "default": "./dist/index.mjs"
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -37,28 +47,36 @@
     "LICENSE",
     "README.md"
   ],
+  "dependencies": {
+    "zod": "^4.3.4"
+  },
   "devDependencies": {
-    "@commitlint/cli": "^20.1.0",
-    "@commitlint/config-conventional": "^20.0.0",
-    "@commitlint/types": "^20.0.0",
-    "@eslint/js": "^9.39.1",
+    "@commitlint/cli": "^20.3.0",
+    "@commitlint/config-conventional": "^20.3.0",
+    "@commitlint/types": "^20.2.0",
+    "@eslint/js": "^9.39.2",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
-    "@types/node": "^24.10.1",
-    "eslint": "^9.39.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.3",
+    "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-unused-imports": "^4.3.0",
+    "globals": "^17.0.0",
     "husky": "^9.1.7",
+    "jest": "^30.2.0",
     "jiti": "^2.6.1",
-    "knip": "^5.70.0",
-    "lint-staged": "^16.2.6",
-    "prettier": "^3.6.2",
-    "prettier-plugin-unused-imports-configurable": "^1.15.0",
-    "rimraf": "^6.1.0",
-    "rollup": "^4.53.2",
-    "rollup-plugin-dts": "^6.2.3",
+    "knip": "^5.79.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.4",
+    "rimraf": "^6.1.2",
+    "rollup": "^4.54.0",
+    "rollup-plugin-dts": "^6.3.0",
     "rollup-plugin-dts-minify": "^1.0.1",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0"
+    "typescript-eslint": "^8.51.0"
   }
 }

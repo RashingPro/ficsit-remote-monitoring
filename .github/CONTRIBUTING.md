@@ -5,4 +5,4 @@ You are always welcome to improve the project by adding your code. There are few
 3. Use Prettier, ESLint, Knip and other included tools to keep project pretty, well-formated and clean
 4. Don't even think about commiting `.vscode` (I will rip you apart)
 
-If you have any questions - open an issue and we will discuss everything.
+If you have any questions - open an issue, and we will discuss everything.

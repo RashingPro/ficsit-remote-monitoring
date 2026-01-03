@@ -1,5 +1,5 @@
-import typescriptPlugin, { RollupTypescriptOptions } from "@rollup/plugin-typescript";
 import terserPlugin from "@rollup/plugin-terser";
+import typescriptPlugin, { RollupTypescriptOptions } from "@rollup/plugin-typescript";
 import { RollupOptions } from "rollup";
 import { dts as dtsPlugin } from "rollup-plugin-dts";
 import dtsMinifyPlugin from "rollup-plugin-dts-minify";
@@ -15,7 +15,8 @@ export default [
         },
         plugins: [
             typescriptPlugin({
-                noEmitOnError: true
+                noEmitOnError: true,
+                rootDir: "src"
             }),
             terserPlugin({
                 keep_classnames: /^.*Error$/,
@@ -35,6 +36,15 @@ export default [
             dir: outDir,
             format: "es"
         },
-        plugins: [dtsPlugin(), dtsMinifyPlugin()]
+        plugins: [
+            dtsPlugin({
+                compilerOptions: {
+                    paths: {
+                        "@/*": ["src/*"]
+                    }
+                }
+            }),
+            dtsMinifyPlugin()
+        ]
     }
 ] as (RollupOptions & RollupTypescriptOptions)[];

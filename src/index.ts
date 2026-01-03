@@ -1,5 +1,29 @@
-import { ChatMessage, Color, Coordinates, FactoryBuilding, MaybeArray, Player, SessionInfo, Switch } from "@/types";
-import util from "util";
+import * as z from "zod";
+
+import {
+    ChatMessage,
+    ChatMessageSchema,
+    Coordinates,
+    FactoryBuilding,
+    FactoryBuildingSchema,
+    HttpRequestMethod,
+    MaybeArray,
+    Player,
+    PlayerSchema,
+    SendChatMessageParams,
+    SendChatMessageResponse,
+    SendChatMessageResponseSchema,
+    SessionInfo,
+    SessionInfoSchema,
+    SetEnabledParams,
+    SetEnabledResponse,
+    SetEnabledResponseSchema,
+    SetSwitchParams,
+    SetSwitchResponse,
+    SetSwitchResponseSchema,
+    Switch,
+    SwitchSchema
+} from "@/types";
 
 export * from "@/types";
 
@@ -16,71 +40,96 @@ export type FicsitRemoteMonitoringResponse =
           error: Error;
       };
 
-export interface SetSwitchParams {
-    id: string;
-    name?: string;
-    priority?: number;
-    status?: boolean;
+export class FicsitRemoteMonitoringRequestError extends Error {
+    public constructor(
+        code: number,
+        errorMessage: string,
+        public readonly rawErrorBody: unknown
+    ) {
+        super(`Ficsit Remote Monitoring API respond with code ${code}: ${errorMessage}`);
+    }
 }
 
 export default class FicsitRemoteMonitoring {
     /**
      * @param port
      * @param token Required only for [these endpoints](https://docs.ficsit.app/ficsitremotemonitoring/latest/json/Write/Write.html). More about it [here](https://docs.ficsit.app/ficsitremotemonitoring/latest/json/authentication.html)
-     * @param baseUrl url in format http://some-url or https://some-url/some/subpage. Do **NOT** put slash or port in the end
-     * @param util
+     * @param baseUrl url in format http://some-url or https://some-url/some/subpage. Do **NOT** put port in the end
      */
     public constructor(
         public readonly port: number = 8080,
         public readonly token?: string,
         baseUrl: string = "http://localhost"
     ) {
+        while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, baseUrl.length - 1);
         this.API_BASE_URL = `${baseUrl}:${port}`;
     }
 
     public readonly API_BASE_URL;
 
-    /**
-     * @param endpoint
-     * @param method
-     * @param body
-     * @param includeAuth
-     * @param throwError should method throw throwError (`true`) or return it (`false`)?
-     * @private
-     */
-    private async doRequest(
+    protected static buildUrl(baseUrl: string, endpoint: string): string {
+        return new URL(endpoint, baseUrl).href;
+    }
+
+    private async makeRequest(
         endpoint: string,
-        method: "GET" | "POST" = "GET",
-        body?: object,
-        includeAuth: boolean = false,
-        throwError: boolean = true
-    ): Promise<FicsitRemoteMonitoringResponse> {
-        const headers: HeadersInit = {};
-        if (includeAuth) {
-            if (!this.token) throw new Error("No token specified");
-            headers["X-FRM-Authorization"] = this.token;
+        options?: {
+            method?: HttpRequestMethod;
+            body?: object;
+            includeAuth?: boolean;
+            responseIsOkValidator?: (res: Response) => boolean;
         }
+    ): Promise<unknown>;
+    private async makeRequest<T extends z.ZodType>(
+        endpoint: string,
+        options: {
+            method?: HttpRequestMethod;
+            body?: object;
+            includeAuth?: boolean;
+            validationSchema: T;
+            responseIsOkValidator?: (res: Response) => boolean;
+        }
+    ): Promise<z.infer<T>>;
+
+    private async makeRequest(
+        endpoint: string,
+        options?: {
+            method?: HttpRequestMethod;
+            body?: object;
+            includeAuth?: boolean;
+            validationSchema?: z.ZodType;
+            responseIsOkValidator?: (res: Response) => boolean;
+        }
+    ) {
+        const headers: Headers = new Headers();
+        if (options?.includeAuth) {
+            if (!this.token) throw new Error("Token was not provided");
+            headers.set("X-FRM-Authorization", this.token);
+        }
+
         try {
-            const response = await fetch(`${this.API_BASE_URL}/${endpoint}`, {
-                method: method,
-                body: body ? JSON.stringify(body) : undefined,
+            const res = await fetch(FicsitRemoteMonitoring.buildUrl(this.API_BASE_URL, endpoint), {
+                method: options?.method ?? "GET",
+                body: options?.body ? JSON.stringify(options.body) : undefined,
                 headers: headers
             });
-            const responseBody = (await response.json()) as object | undefined;
-            if (!response.ok || !responseBody) {
-                const err = new Error(
-                    `Request failed with status: ${response.status}: ${response.statusText}. Response body: ${util.inspect(responseBody, { depth: null, colors: true })}`
+            const resBody = await res.json();
+            if (typeof resBody !== "object" || !(options?.responseIsOkValidator ?? (r => r.ok))(res))
+                throw new FicsitRemoteMonitoringRequestError(
+                    res.status,
+                    resBody.error ?? "No error message provided in response body",
+                    resBody
                 );
-                if (throwError) {
-                    throw err;
-                } else return { ok: false, response: response, responseBody: response, error: err };
-            }
-            return { ok: true, response: response, responseBody: responseBody };
+            const formatedBody = FicsitRemoteMonitoring.formatBodyRaw(resBody);
+            return options?.validationSchema
+                ? FicsitRemoteMonitoring.validateBody(formatedBody, options.validationSchema)
+                : formatedBody;
         } catch (err) {
-            if (!throwError) return { ok: false, error: err as Error };
             if (
                 err instanceof TypeError &&
-                util.inspect(err.cause, { depth: 0, colors: false }).startsWith("AggregateError [ECONNREFUSED]")
+                err.cause instanceof AggregateError &&
+                // @ts-expect-error If connection fails, AggregateError actually has `code` property
+                err.cause["code"] == "ECONNREFUSED"
             ) {
                 throw new TypeError(err.message + ". [31mIs the Ficsit Remote Monitoring server running?[0m", {
                     cause: err.cause
@@ -89,158 +138,119 @@ export default class FicsitRemoteMonitoring {
         }
     }
 
-    public static parseBodyRawEntry(entry: object): object {
-        if (Array.isArray(entry)) {
-            return entry.map(val => this.parseBodyRawEntry(val));
+    public static formatBodyRaw(body: object): object;
+    public static formatBodyRaw(body: object[]): object[];
+
+    public static formatBodyRaw(body: MaybeArray<object>): MaybeArray<object> {
+        if (Array.isArray(body)) {
+            return body.map(val => this.formatBodyRaw(val));
         } else {
-            if (typeof entry === "object") {
+            if (typeof body === "object") {
                 return Object.fromEntries(
-                    Object.entries(entry).map(([key, value]) => {
+                    Object.entries(body).map(([key, value]) => {
                         const newKey = key == "ID" ? "id" : key.charAt(0).toLowerCase() + key.slice(1);
-                        return [newKey, this.parseBodyRawEntry(value)];
+                        return [newKey, this.formatBodyRaw(value)];
                     })
                 );
-            } else return entry;
+            } else return body;
         }
     }
 
-    public static parseBodyRaw<T>(body: object): T {
-        return this.parseBodyRawEntry(body) as T;
+    public static validateBody(body: unknown, schema: z.ZodType) {
+        return z.parse(schema, body);
     }
 
     public async ping(): Promise<number> {
         const before = new Date();
-        const response = await this.doRequest("/ping", "GET", undefined, false, false);
-        if (!response.responseBody) return -1;
+        await this.makeRequest("ping", { responseIsOkValidator: r => r.status < 500 });
         const after = new Date();
-        const ping = after.valueOf() - before.valueOf();
-        return ping;
+        return after.valueOf() - before.valueOf();
     }
 
     public async createPing(position: Coordinates) {
-        await this.doRequest("createPing", "POST", position, true);
+        await this.makeRequest("createPing", { includeAuth: true, method: "POST", body: position });
     }
 
-    public async setEnabled(id: string, status: boolean): Promise<object[]> {
-        const response = await this.doRequest("setEnabled", "POST", { ID: id, status: status }, true);
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return response.responseBody as object[];
-    }
-    public async setSwitches(params: MaybeArray<SetSwitchParams>) {
-        const fn = (value: SetSwitchParams) => {
-            return { ...value, id: undefined, ID: value.id };
-        };
-        const response = await this.doRequest(
-            "setSwitches",
-            "POST",
-            Array.isArray(params) ? params.map(fn) : fn(params),
-            true
-        );
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw<
-            { id: string; name?: string; status?: boolean; priority?: number }[]
-        >(response.responseBody);
+    public async setEnabled(params: MaybeArray<SetEnabledParams>): Promise<SetEnabledResponse[]> {
+        const fn = (value: SetSwitchParams) => ({ ...value, id: undefined, ID: value.id });
+
+        return await this.makeRequest("setEnabled", {
+            includeAuth: true,
+            method: "POST",
+            body: Array.isArray(params) ? params.map(fn) : fn(params),
+            validationSchema: z.array(SetEnabledResponseSchema)
+        });
     }
 
     public async getChatMessages(): Promise<ChatMessage[]> {
-        const response = await this.doRequest("getChatMessages");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getChatMessages", {
+            validationSchema: z.array(ChatMessageSchema)
+        });
     }
-    public async sendChatMessage(message: string, params?: Partial<{ sender: "" | "ada" | string; color: Color }>) {
-        const response = await this.doRequest("sendChatMessage", "POST", { message: message, ...params }, true);
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw<{ isSent: boolean; message: string }>(response.responseBody);
+    public async sendChatMessage(params: MaybeArray<SendChatMessageParams>): Promise<SendChatMessageResponse[]> {
+        const fn = (v: SendChatMessageParams) => ({ message: v.message, ...v.options });
+
+        return await this.makeRequest("sendChatMessage", {
+            method: "POST",
+            body: Array.isArray(params) ? params.map(fn) : fn(params),
+            includeAuth: true,
+            validationSchema: z.array(SendChatMessageResponseSchema)
+        });
     }
 
     public async getSessionInfo(): Promise<SessionInfo> {
-        const response = await this.doRequest("getSessionInfo");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getSessionInfo", { validationSchema: SessionInfoSchema });
     }
     public async getPlayers(): Promise<Player[]> {
-        const response = await this.doRequest("getPlayer");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getPlayer", { validationSchema: z.array(PlayerSchema) });
     }
 
     public async getFactory(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getFactory");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getFactory", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getAssemblers(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getAssembler");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getAssembler", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getBlenders(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getBlender");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getBlender", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getConstructors(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getConstructor");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getConstructor", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getParticleAccelerators(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getParticle");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getParticle", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getConverters(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getConverter");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getConverter", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getFoundries(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getFoundry");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getFoundry", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getManufacturers(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getManufacturer");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getManufacturer", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getPackagers(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getPackager");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getPackager", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getRefineries(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getRefinery");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getRefinery", { validationSchema: z.array(FactoryBuildingSchema) });
     }
     public async getSmelters(): Promise<FactoryBuilding[]> {
-        const response = await this.doRequest("getSmelter");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getSmelter", { validationSchema: z.array(FactoryBuildingSchema) });
     }
 
     public async getSwitches(): Promise<Switch[]> {
-        const response = await this.doRequest("getSwitches");
-        if (!response.ok) throw response.error;
-        if (response.responseBody === undefined) throw new Error("Unknown error");
-        return FicsitRemoteMonitoring.parseBodyRaw(response.responseBody);
+        return await this.makeRequest("getSwitches", { validationSchema: z.array(SwitchSchema) });
+    }
+    public async setSwitches(params: MaybeArray<SetSwitchParams>): Promise<SetSwitchResponse[]> {
+        const fn = (value: SetSwitchParams) => {
+            return { ...value, id: undefined, ID: value.id };
+        };
+        return await this.makeRequest("setSwitches", {
+            method: "POST",
+            body: Array.isArray(params) ? params.map(fn) : fn(params),
+            includeAuth: true,
+            validationSchema: z.array(SetSwitchResponseSchema)
+        });
     }
 }
