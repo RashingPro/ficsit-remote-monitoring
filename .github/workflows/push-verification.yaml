@@ -4,23 +4,23 @@ on:
         branches:
             - main
         paths:
-            - 'src'
-            - 'eslint.config.ts'
-            - 'package.json'
-            - 'tsconfig.json'
+            - "src"
+            - "eslint.config.ts"
+            - "package.json"
+            - "tsconfig.json"
 
 jobs:
     lint-and-typecheck:
         name: Lint and typechecking
         runs-on: ubuntu-latest
         steps:
-            -   name: Checkout repo
-                uses: actions/checkout@v6.0.1
-            -   name: Setup environment
-                uses: "./.github/actions/setup"
-            -   name: Run typechecking
-                run: "tsc --noEmit"
-            -   name: Run EsLint
-                run: "pnpm run lint"
-            -   name: Run tests
-                run: "pnpm run test"
+            - name: Checkout repo
+              uses: actions/checkout@v6.0.1
+            - name: Setup environment
+              uses: "./.github/actions/setup"
+            - name: Run typechecking
+              run: "tsc --noEmit"
+            - name: Run EsLint
+              run: "pnpm run lint"
+            - name: Run tests
+              run: "pnpm run test"
