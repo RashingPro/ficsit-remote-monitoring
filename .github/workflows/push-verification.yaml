@@ -22,3 +22,5 @@ jobs:
                 run: "tsc --noEmit"
             -   name: Run EsLint
                 run: "pnpm run lint"
+            -   name: Run tests
+                run: "pnpm run test"
