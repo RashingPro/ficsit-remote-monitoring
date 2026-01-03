@@ -1,5 +1,18 @@
 # Ficsit Remote Monitoring
 
+<div align="center">
+    <img src="https://img.shields.io/github/actions/workflow/status/RashingPro/ficsit-remote-monitoring/push-verification.yaml?label=tests" alt="tests workflow status badge"/>
+    <a href="https://www.npmjs.com/package/ficsit-remote-monitoring/">
+        <img src="https://img.shields.io/npm/dw/ficsit-remote-monitoring?label=npm%20downloads&color=cc3838" alt="npm downloads count badge"/>
+    </a>
+    <a href="https://www.npmjs.com/package/ficsit-remote-monitoring/">
+        <img src="https://img.shields.io/npm/v/ficsit-remote-monitoring/latest" alt="npm latest version badge"/>
+    </a>
+    <a href="https://www.codefactor.io/repository/github/rashingpro/ficsit-remote-monitoring">
+        <img src="https://www.codefactor.io/repository/github/rashingpro/ficsit-remote-monitoring/badge" alt="CodeFactor badge"/>
+    </a>
+</div>
+
 > [!NOTE]
 > Developers of mod Ficsit Remote Monitoring in no way connected to this project. Don't ask them about anything related to this
 
