@@ -11,7 +11,7 @@ runs:
           id: deps-cache-restore
           uses: actions/cache/restore@v5.0.1
           with:
-              path: /node_modules
+              path: "node_modules"
               key: "npm-dependencies-${{ hashFiles('pnpm-lock.yaml') }}"
               restore-keys: "npm-dependencies-"
         - name: Install dependencies
@@ -20,5 +20,5 @@ runs:
         - name: Cache dependencies
           uses: actions/cache/save@v5.0.1
           with:
-              path: /node_modules
+              path: "node_modules"
               key: "npm-dependencies-${{ hashFiles('pnpm-lock.yaml') }}"

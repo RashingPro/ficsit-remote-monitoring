@@ -1,4 +1,4 @@
-name: push-verification.yaml
+name: Push verification
 on:
     push:
         branches:
@@ -8,10 +8,10 @@ on:
             - "eslint.config.ts"
             - "package.json"
             - "tsconfig.json"
-            - ".github"
+            - ".github/**"
 
 jobs:
-    lint-and-typecheck:
+    checks:
         name: Lint and typechecking
         runs-on: ubuntu-latest
         steps:
