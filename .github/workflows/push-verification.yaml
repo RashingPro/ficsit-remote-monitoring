@@ -3,6 +3,11 @@ on:
     push:
         branches:
             - main
+        paths:
+            - 'src'
+            - 'eslint.config.ts'
+            - 'package.json'
+            - 'tsconfig.json'
 
 jobs:
     lint-and-typecheck:
