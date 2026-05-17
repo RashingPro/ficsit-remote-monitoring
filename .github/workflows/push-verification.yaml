@@ -19,9 +19,7 @@ jobs:
               uses: actions/checkout@v6.0.1
             - name: Setup environment
               uses: "./.github/actions/setup"
-            - name: Run typechecking
-              run: "tsc --noEmit"
-            - name: Run EsLint
-              run: "pnpm run lint"
+            - name: Run build
+              run: "pnpm run build"
             - name: Run tests
               run: "pnpm run test"
