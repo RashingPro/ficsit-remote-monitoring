@@ -39,12 +39,12 @@ async function main() {
 
     const factory = (await frm.getFactory())[0];
     await frm.setEnabled({
-        id: res.id,
-        status: res.isPaused
+        id: factory.id,
+        status: factory.isPaused
     });
 }
 
-main();
+void main();
 ```
 
 ## Development progress
