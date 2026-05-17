@@ -18,6 +18,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^21.0.1
         version: 21.0.1
+      '@commitlint/format':
+        specifier: ^21.0.1
+        version: 21.0.1
       '@commitlint/types':
         specifier: ^21.0.1
         version: 21.0.1
