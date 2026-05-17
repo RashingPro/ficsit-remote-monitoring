@@ -1,8 +1,14 @@
-# Installed packages
+### Installed packages ###
 /node_modules
 
-# Build output
+### Build output ###
 /dist
 
-# Dotenv
+### Dotenv ###
 *.env
+
+### IDEs and editors ###
+/.idea/*
+!/.idea/prettier.xml
+!/.idea/jsLinters
+/.vscode
