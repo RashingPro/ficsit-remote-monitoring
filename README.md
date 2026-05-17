@@ -47,7 +47,7 @@ async function main() {
 main();
 ```
 
-## Developing progress
+## Development progress
 
 Implemented methods:
 
