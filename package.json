@@ -27,7 +27,8 @@
     "prebuild": "npm run format && npm run lint",
     "build": "npm run cleanOutDir && rollup --config rollup.config.ts --configPlugin typescript",
     "knip": "knip",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "husky"
   },
   "type": "module",
   "types": "./dist/index.d.ts",
